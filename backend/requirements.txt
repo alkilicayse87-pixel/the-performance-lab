@@ -1,0 +1,25 @@
+# Backend API
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+
+# LLM and AI framework
+langchain
+langchain-openai
+langchain-community
+langgraph
+
+# Vector database and embeddings
+chromadb
+langchain-chroma
+
+# YouTube transcript
+youtube-transcript-api
+
+# Testing
+pytest
+httpx
+
+# Evaluation and observability
+langsmith
