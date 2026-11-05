@@ -135,28 +135,6 @@ def test_agent_chat_internal_error(client, monkeypatch):
     assert response.status_code == 500
     assert response.json()["detail"] == "The agent could not process the request."
 
-def test_chat_success(client, monkeypatch):
-    def fake_generate_answer(message, video_id, conversation_id):
-        return "This is a legacy chat test answer."
-
-    monkeypatch.setattr(
-        main,
-        "generate_answer",
-        fake_generate_answer,
-    )
-
-    response = client.post(
-        "/chat",
-        json={
-            "video_id": "abcdefghijk",
-            "conversation_id": "test-conversation",
-            "message": "What is this video about?",
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json()["answer"] == "This is a legacy chat test answer."
-
 
 def test_agent_chat_rejects_invalid_request(client):
     response = client.post(

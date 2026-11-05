@@ -109,3 +109,38 @@ def add_video_chunks(
     )
 
     return ids
+
+def get_cached_video_chunks(video_id: str) -> list[dict]:
+    """
+    Retrieve existing transcript chunks for a video from ChromaDB.
+    """
+
+    if not video_id:
+        raise ValueError("video_id cannot be empty.")
+
+    vector_store = get_vector_store()
+
+    results = vector_store.get(
+        where={"video_id": video_id},
+        include=["documents", "metadatas"],
+    )
+
+    chunks = []
+
+    for document, metadata in zip(
+        results["documents"],
+        results["metadatas"],
+    ):
+        chunks.append({
+            "text": document,
+            "video_id": metadata["video_id"],
+            "chunk_index": metadata["chunk_index"],
+            "start_time": metadata["start_time"],
+            "end_time": metadata["end_time"],
+            "segment_count": metadata["segment_count"],
+        })
+
+    return sorted(
+        chunks,
+        key=lambda chunk: chunk["chunk_index"],
+    )

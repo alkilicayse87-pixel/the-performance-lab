@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from openai import OpenAIError
+import logging
 
 from app.services.video_service import ingest_youtube_video
 from app.config import OPENAI_MODEL
@@ -72,6 +73,7 @@ def ingest_video(request: VideoIngestRequest):
         )
 
     except Exception:
+        logging.exception("Video ingestion failed")
         raise HTTPException(
             status_code=500,
             detail="The video could not be processed.",

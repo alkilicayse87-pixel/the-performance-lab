@@ -50,18 +50,54 @@ def fetch_youtube_transcript(
     languages: list[str] | None = None,
 ) -> dict:
     """
-    Fetch a YouTube transcript and preserve segment timestamps.
+    Fetch a YouTube transcript, using translation or the original
+    language as fallback when the requested language is unavailable.
     """
 
     if languages is None:
         languages = ["en"]
 
     transcript_api = YouTubeTranscriptApi()
+    transcript_list = transcript_api.list(video_id)
 
-    fetched_transcript = transcript_api.fetch(
-        video_id,
-        languages=languages,
-    )
+    try:
+        # First, look for a transcript in a requested language.
+        transcript = transcript_list.find_transcript(languages)
+        fetched_transcript = transcript.fetch()
+
+    except Exception as error:
+        from youtube_transcript_api._errors import NoTranscriptFound
+
+        if not isinstance(error, NoTranscriptFound):
+            raise
+
+        # No direct transcript: use an available transcript.
+        transcript = next(iter(transcript_list), None)
+
+        if transcript is None:
+            raise ValueError("No transcript is available for this video.")
+
+        # Check whether the original transcript can be translated.
+        available_translations = {
+            item.language_code
+            for item in transcript.translation_languages
+        }
+
+        target_language = next(
+            (
+                language
+                for language in languages
+                if language in available_translations
+            ),
+            None,
+        )
+
+        if target_language:
+            fetched_transcript = transcript.translate(
+                target_language
+            ).fetch()
+        else:
+            fetched_transcript = transcript.fetch()
 
     segments = fetched_transcript.to_raw_data()
 

@@ -35,6 +35,9 @@ def test_fetch_youtube_transcript(monkeypatch):
         language_code = "en"
         is_generated = False
 
+        def fetch(self):
+            return self
+
         def to_raw_data(self):
             return [
                 {
@@ -44,11 +47,15 @@ def test_fetch_youtube_transcript(monkeypatch):
                 }
             ]
 
-    class FakeYouTubeTranscriptApi:
-        def fetch(self, video_id, languages):
-            assert video_id == "abcdefghijk"
+    class FakeTranscriptList:
+        def find_transcript(self, languages):
             assert languages == ["en"]
             return FakeTranscript()
+
+    class FakeYouTubeTranscriptApi:
+        def list(self, video_id):
+            assert video_id == "abcdefghijk"
+            return FakeTranscriptList()
 
     monkeypatch.setattr(
         youtube_transcript,

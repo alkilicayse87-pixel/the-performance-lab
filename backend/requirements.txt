@@ -24,3 +24,5 @@ httpx
 
 # Evaluation and observability
 langsmith
+
+yt-dlp
