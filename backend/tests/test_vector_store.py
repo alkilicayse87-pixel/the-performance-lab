@@ -1,88 +1,105 @@
+import pytest
 
-from app.ingestion.youtube_transcript import (
-    extract_video_id,
-    fetch_youtube_transcript,
-)
-
-from app.processing.transcript_processor import (
-    clean_segments,
-    create_chunks,
-)
-
-from app.vector_store.chroma_store import (
-    add_video_chunks,
-    get_vector_store,
-)
+from app.vector_store import chroma_store
 
 
-VIDEO_URL = "https://www.youtube.com/watch?v=oCNx8Xa-oug"
+@pytest.fixture
+def sample_chunks():
+    return [
+        {
+            "chunk_index": 0,
+            "text": "Freestyle swimming technique",
+            "start_time": 10.0,
+            "end_time": 20.0,
+            "segment_count": 3,
+            "segment_indices": [0, 1, 2],
+        },
+        {
+            "chunk_index": 1,
+            "text": "Breathing and body position",
+            "start_time": 20.0,
+            "end_time": 30.0,
+            "segment_count": 2,
+            "segment_indices": [3, 4],
+        },
+    ]
 
 
-def main():
-    # 1. Retrieve YouTube transcript
-    video_id = extract_video_id(VIDEO_URL)
-
-    transcript = fetch_youtube_transcript(
-        video_id,
-        languages=["en"],
+def test_generate_chunk_id_is_deterministic(sample_chunks):
+    first_id = chroma_store.generate_chunk_id(
+        "video123456",
+        sample_chunks[0],
     )
 
-    # 2. Clean transcript
-    cleaned_segments = clean_segments(
-        transcript["segments"]
+    second_id = chroma_store.generate_chunk_id(
+        "video123456",
+        sample_chunks[0],
     )
 
-    # 3. Create chunks
-    chunks = create_chunks(
-        cleaned_segments,
-        chunk_size=1000,
-        overlap=150,
+    assert first_id == second_id
+
+
+def test_generate_chunk_id_changes_with_video_id(sample_chunks):
+    first_id = chroma_store.generate_chunk_id(
+        "video123456",
+        sample_chunks[0],
     )
 
-    print("\n--- VECTOR STORE INSERTION ---")
-
-    print("Video ID:", video_id)
-    print("Chunks to insert:", len(chunks))
-
-    # 4. Insert chunks into ChromaDB
-    ids = add_video_chunks(
-        video_id=video_id,
-        chunks=chunks,
+    second_id = chroma_store.generate_chunk_id(
+        "video654321",
+        sample_chunks[0],
     )
 
-    print("Inserted chunk IDs:", len(ids))
+    assert first_id != second_id
 
-    # 5. Verify database contents
-    vector_store = get_vector_store()
 
-    print("Total documents in database:", vector_store._collection.count())
+def test_add_video_chunks_creates_documents_and_ids(
+    monkeypatch,
+    sample_chunks,
+):
+    captured = {}
 
-    # 6. Test semantic retrieval
-    query = "Which muscles are involved in the freestyle swimming stroke and in what order?"
+    class FakeVectorStore:
+        def add_documents(self, documents, ids):
+            captured["documents"] = documents
+            captured["ids"] = ids
 
-    results = vector_store.similarity_search(
-        query,
-        k=3,
-        filter={"video_id": video_id},
+    fake_store = FakeVectorStore()
+
+    monkeypatch.setattr(
+        chroma_store,
+        "get_vector_store",
+        lambda: fake_store,
     )
 
-    print("\n--- SEMANTIC SEARCH TEST ---")
+    result = chroma_store.add_video_chunks(
+        video_id="video123456",
+        chunks=sample_chunks,
+    )
 
-    print("Query:", query)
-    print("Results found:", len(results))
+    documents = captured["documents"]
 
-    for index, document in enumerate(results, start=1):
-        print(f"\nResult {index}")
-        print("Video ID:", document.metadata["video_id"])
-        print("Chunk:", document.metadata["chunk_index"])
-        print(
-            "Timestamp:",
-            document.metadata["start_time"],
-            "-",
-            document.metadata["end_time"],
+    assert len(documents) == 2
+    assert len(captured["ids"]) == 2
+    assert result == captured["ids"]
+
+    assert documents[0].page_content == "Freestyle swimming technique"
+    assert documents[0].metadata["video_id"] == "video123456"
+    assert documents[0].metadata["chunk_index"] == 0
+    assert documents[0].metadata["segment_indices"] == "0,1,2"
+
+
+def test_add_video_chunks_rejects_empty_video_id():
+    with pytest.raises(ValueError):
+        chroma_store.add_video_chunks(
+            video_id="",
+            chunks=[{"chunk_index": 0, "text": "Test"}],
         )
-        print("Text:", document.page_content[:300])
 
 
-if __name__ == "__main__":
-    main()
+def test_add_video_chunks_rejects_empty_chunks():
+    with pytest.raises(ValueError):
+        chroma_store.add_video_chunks(
+            video_id="video123456",
+            chunks=[],
+        )

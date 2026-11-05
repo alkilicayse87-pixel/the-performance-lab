@@ -9,6 +9,7 @@ langchain
 langchain-openai
 langchain-community
 langgraph
+langgraph-checkpoint-sqlite
 
 # Vector database and embeddings
 chromadb

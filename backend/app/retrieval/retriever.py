@@ -46,3 +46,38 @@ def retrieve_chunks(
         })
 
     return results
+
+def retrieve_all_chunks(video_id: str) -> list[dict]:
+    """
+    Retrieve all transcript chunks for a specific video.
+    """
+
+    if not video_id:
+        raise ValueError("Video ID cannot be empty.")
+
+    vector_store = get_vector_store()
+
+    results = vector_store.get(
+        where={"video_id": video_id},
+        include=["documents", "metadatas"],
+    )
+
+    chunks = []
+
+    for document, metadata in zip(
+        results["documents"],
+        results["metadatas"],
+    ):
+        chunks.append({
+            "text": document,
+            "video_id": metadata["video_id"],
+            "chunk_index": metadata["chunk_index"],
+            "start_time": metadata["start_time"],
+            "end_time": metadata["end_time"],
+            "segment_count": metadata["segment_count"],
+        })
+
+    return sorted(
+        chunks,
+        key=lambda item: item["start_time"],
+    )

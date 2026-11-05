@@ -2,10 +2,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from openai import OpenAIError
 
-from app.services.chat_service import generate_answer
 from app.services.video_service import ingest_youtube_video
 from app.config import OPENAI_MODEL
-
+from app.services.agent_service import generate_agent_answer
 
 app = FastAPI(
     title="AI Video Knowledge Assistant",
@@ -26,6 +25,12 @@ class ChatRequest(BaseModel):
         min_length=11,
         max_length=11,
         description="The YouTube video ID",
+    )
+
+    conversation_id: str = Field(
+        min_length=1,
+        max_length=128,
+        description="The conversation identifier",
     )
 
     message: str = Field(
@@ -73,23 +78,41 @@ def ingest_video(request: VideoIngestRequest):
         )
 
 
-@app.post("/chat")
-def chat(request: ChatRequest):
+@app.post(
+    "/agent-chat",
+    description="Ask questions about an ingested YouTube video using the LangGraph agent.",
+)
+def agent_chat(request: ChatRequest):
     try:
-        answer = generate_answer(
+        answer = generate_agent_answer(
             message=request.message,
             video_id=request.video_id,
+            conversation_id=request.conversation_id,
         )
 
         return {
             "question": request.message,
             "video_id": request.video_id,
+            "conversation_id": request.conversation_id,
             "answer": answer,
             "model": OPENAI_MODEL,
+            "agent": "LangGraph",
         }
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
     except OpenAIError:
         raise HTTPException(
             status_code=502,
             detail="The AI service could not process the request.",
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="The agent could not process the request.",
         )
