@@ -16,6 +16,7 @@ VIDEOS = [
     {"title": "How the Heart Changes with Exercise", "video_id": "OM-AeVyW1kk"},
     {"title": "Reduce Your Risk of Injury", "video_id": "Att-yGdYfgI"},
     {"title": "Recovery Strategies for Athletes", "video_id": "W2-UL8P610k"},
+    {"title": "What is Strength?", "video_id": "nUsmc4FgfBE"},
 ]
 
 OLD_VIDEO_ID = "KTDGYjcR0Yc"

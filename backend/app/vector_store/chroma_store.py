@@ -138,6 +138,11 @@ def get_cached_video_chunks(video_id: str) -> list[dict]:
             "start_time": metadata["start_time"],
             "end_time": metadata["end_time"],
             "segment_count": metadata["segment_count"],
+            "segment_indices": [
+                int(index)
+                for index in metadata["segment_indices"].split(",")
+                if index
+            ],
         })
 
     return sorted(

@@ -18,18 +18,22 @@ def ingest_youtube_video(
     if not cached_chunks:
         raise ValueError(
             "This video is not available in the supported catalog. "
-            "Please select one of the five supported videos."
+            "Please select one of the supported videos."
         )
 
     return {
         "video_id": video_id,
         "transcription_method": "local_catalog",
-        "original_segments": sum(
-            chunk["segment_count"] for chunk in cached_chunks
-        ),
-        "cleaned_segments": sum(
-            chunk["segment_count"] for chunk in cached_chunks
-        ),
+        "original_segments": len({
+            index
+            for chunk in cached_chunks
+            for index in chunk["segment_indices"]
+        }),
+        "cleaned_segments": len({
+            index
+            for chunk in cached_chunks
+            for index in chunk["segment_indices"]
+        }),
         "total_chunks": len(cached_chunks),
         "stored_chunks": len(cached_chunks),
         "status": "success",
