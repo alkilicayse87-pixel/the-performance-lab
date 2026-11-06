@@ -21,6 +21,12 @@ from app.vector_store.chroma_store import (
     get_cached_video_chunks,
 )
 
+from youtube_transcript_api._errors import (
+    IpBlocked,
+    NoTranscriptFound,
+    TranscriptsDisabled,
+    YouTubeRequestFailed,
+)
 
 def ingest_youtube_video(
     youtube_url: str,
@@ -64,6 +70,7 @@ def ingest_youtube_video(
         TranscriptsDisabled,
         NoTranscriptFound,
         IpBlocked,
+        YouTubeRequestFailed,
     ):
         transcript = transcribe_youtube_audio(video_id)
         transcription_method = "openai_transcription"
