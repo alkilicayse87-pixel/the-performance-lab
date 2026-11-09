@@ -26,3 +26,4 @@ httpx
 langsmith
 
 yt-dlp
+python-multipart

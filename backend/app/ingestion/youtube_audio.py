@@ -68,3 +68,32 @@ def transcribe_youtube_audio(video_id: str) -> dict:
             "is_generated": True,
             "segments": segments,
         }
+
+
+from io import BytesIO
+
+
+def transcribe_user_audio(
+    audio_data: bytes,
+    filename: str,
+    content_type: str,
+) -> str:
+    """Transcribe a user's microphone recording with OpenAI Whisper."""
+
+    if not audio_data:
+        raise ValueError("The audio recording is empty.")
+
+    if len(audio_data) > MAX_AUDIO_SIZE:
+        raise ValueError("Audio exceeds the 25 MB limit.")
+
+    audio_file = BytesIO(audio_data)
+    audio_file.name = filename
+
+    transcription = client.audio.transcriptions.create(
+        model=TRANSCRIPTION_MODEL,
+        file=(filename, audio_file, content_type),
+        response_format="text",
+        language="en",
+    )
+
+    return transcription

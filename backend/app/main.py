@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from openai import OpenAIError
+from app.ingestion.youtube_audio import transcribe_user_audio, MAX_AUDIO_SIZE
 import logging
 
 from app.services.video_service import ingest_youtube_video
@@ -131,4 +132,50 @@ def agent_chat(request: ChatRequest):
         raise HTTPException(
             status_code=500,
             detail="The agent could not process the request.",
+        )
+
+
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    try:
+        audio_data = await file.read()
+
+        if not audio_data:
+            raise HTTPException(
+                status_code=400,
+                detail="The audio recording is empty."
+            )
+
+        if len(audio_data) > MAX_AUDIO_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Audio exceeds the 25 MB limit."
+            )
+
+        text = transcribe_user_audio(
+            audio_data=audio_data,
+            filename=file.filename or "recording.webm",
+            content_type=file.content_type or "audio/webm",
+        )
+
+        return {"text": text}
+
+    except HTTPException:
+        raise
+
+    except OpenAIError:
+        logging.exception("Audio transcription failed")
+        raise HTTPException(
+            status_code=502,
+            detail="Audio transcription service unavailable."
+        )
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    except Exception:
+        logging.exception("Audio transcription failed")
+        raise HTTPException(
+            status_code=500,
+            detail="The audio could not be transcribed."
         )
