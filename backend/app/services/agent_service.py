@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langchain_core.messages import ToolMessage
 
 from app.agents.agent import create_video_agent
 
@@ -11,15 +12,12 @@ DATABASE_DIRECTORY = PROJECT_ROOT / "storage"
 DATABASE_PATH = DATABASE_DIRECTORY / "agent_checkpoints.sqlite"
 
 
-def generate_agent_answer(
+def _invoke_agent(
     message: str,
     video_id: str,
     conversation_id: str,
-) -> str:
-    """
-    Generate an answer using the LangGraph agent
-    and persistent conversation memory.
-    """
+) -> list:
+    """Run the agent and return its messages."""
 
     if not message.strip():
         raise ValueError("Message cannot be empty.")
@@ -35,7 +33,6 @@ def generate_agent_answer(
         exist_ok=True,
     )
 
-    # A separate thread is used for each conversation and video
     thread_id = f"{conversation_id}:{video_id}"
 
     with SqliteSaver.from_conn_string(
@@ -63,4 +60,50 @@ def generate_agent_answer(
             },
         )
 
-    return result["messages"][-1].content
+    return result["messages"]
+
+
+def generate_agent_answer(
+    message: str,
+    video_id: str,
+    conversation_id: str,
+) -> str:
+    """Generate an answer using the agent and persistent memory."""
+
+    messages = _invoke_agent(
+        message=message,
+        video_id=video_id,
+        conversation_id=conversation_id,
+    )
+
+    return messages[-1].content
+
+
+def generate_agent_answer_with_evidence(
+    message: str,
+    video_id: str,
+    conversation_id: str,
+) -> dict:
+    """Generate an answer and collect actual tool outputs."""
+
+    messages = _invoke_agent(
+        message=message,
+        video_id=video_id,
+        conversation_id=conversation_id,
+    )
+
+    answer = messages[-1].content
+
+    tool_evidence = []
+
+    for message in messages:
+        if isinstance(message, ToolMessage):
+            tool_evidence.append({
+                "tool_name": message.name,
+                "content": message.content,
+            })
+
+    return {
+        "answer": answer,
+        "tool_evidence": tool_evidence,
+    }
