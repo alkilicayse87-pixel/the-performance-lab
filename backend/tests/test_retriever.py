@@ -1,46 +1,25 @@
-import pytest
-from types import SimpleNamespace
+﻿import pytest
 
 from app.retrieval import retriever
 
 
-class FakeVectorStore:
-    def __init__(self, documents):
-        self.documents = documents
-        self.received_query = None
-        self.received_k = None
-        self.received_filter = None
+def test_retrieve_chunks_returns_expected_data(monkeypatch):
+    expected = [{
+        "text": "Freestyle swimming technique",
+        "video_id": "video123456",
+        "chunk_index": 2,
+        "start_time": 10.0,
+        "end_time": 20.0,
+        "segment_count": 5,
+    }]
 
-    def similarity_search(self, query, k, filter=None):
-        self.received_query = query
-        self.received_k = k
-        self.received_filter = filter
-        return self.documents
-
-
-@pytest.fixture
-def fake_documents():
-    return [
-        SimpleNamespace(
-            page_content="Freestyle swimming technique",
-            metadata={
-                "video_id": "video123456",
-                "chunk_index": 2,
-                "start_time": 10.0,
-                "end_time": 20.0,
-                "segment_count": 5,
-            },
-        )
-    ]
-
-
-def test_retrieve_chunks_returns_expected_data(monkeypatch, fake_documents):
-    fake_store = FakeVectorStore(fake_documents)
+    def fake_retrieve_chunks(query, video_id=None, k=5):
+        return expected
 
     monkeypatch.setattr(
         retriever,
-        "get_vector_store",
-        lambda: fake_store,
+        "neon_retrieve_chunks",
+        fake_retrieve_chunks,
     )
 
     result = retriever.retrieve_chunks(
@@ -49,22 +28,24 @@ def test_retrieve_chunks_returns_expected_data(monkeypatch, fake_documents):
         k=3,
     )
 
-    assert len(result) == 1
-    assert result[0]["text"] == "Freestyle swimming technique"
-    assert result[0]["video_id"] == "video123456"
-    assert result[0]["chunk_index"] == 2
-    assert result[0]["start_time"] == 10.0
-    assert result[0]["end_time"] == 20.0
-    assert result[0]["segment_count"] == 5
+    assert result == expected
 
 
-def test_retrieve_chunks_applies_video_filter(monkeypatch, fake_documents):
-    fake_store = FakeVectorStore(fake_documents)
+def test_retrieve_chunks_passes_parameters_to_neon(monkeypatch):
+    received = {}
+
+    def fake_retrieve_chunks(query, video_id=None, k=5):
+        received.update({
+            "query": query,
+            "video_id": video_id,
+            "k": k,
+        })
+        return []
 
     monkeypatch.setattr(
         retriever,
-        "get_vector_store",
-        lambda: fake_store,
+        "neon_retrieve_chunks",
+        fake_retrieve_chunks,
     )
 
     retriever.retrieve_chunks(
@@ -73,26 +54,29 @@ def test_retrieve_chunks_applies_video_filter(monkeypatch, fake_documents):
         k=5,
     )
 
-    assert fake_store.received_filter == {
-        "video_id": "video123456"
+    assert received == {
+        "query": "swimming",
+        "video_id": "video123456",
+        "k": 5,
     }
 
 
-def test_retrieve_chunks_without_video_id(monkeypatch, fake_documents):
-    fake_store = FakeVectorStore(fake_documents)
+def test_retrieve_chunks_without_video_id(monkeypatch):
+    received = {}
+
+    def fake_retrieve_chunks(query, video_id=None, k=5):
+        received["video_id"] = video_id
+        return []
 
     monkeypatch.setattr(
         retriever,
-        "get_vector_store",
-        lambda: fake_store,
+        "neon_retrieve_chunks",
+        fake_retrieve_chunks,
     )
 
-    retriever.retrieve_chunks(
-        query="swimming",
-        k=5,
-    )
+    retriever.retrieve_chunks(query="swimming")
 
-    assert fake_store.received_filter is None
+    assert received["video_id"] is None
 
 
 def test_retrieve_chunks_rejects_empty_query():
@@ -102,7 +86,21 @@ def test_retrieve_chunks_rejects_empty_query():
 
 def test_retrieve_chunks_rejects_invalid_k():
     with pytest.raises(ValueError):
-        retriever.retrieve_chunks(
-            query="swimming",
-            k=0,
-        )
+        retriever.retrieve_chunks(query="swimming", k=0)
+
+
+def test_retrieve_all_chunks_delegates_to_neon(monkeypatch):
+    expected = [{"video_id": "video123456", "text": "Swimming"}]
+
+    monkeypatch.setattr(
+        retriever,
+        "neon_retrieve_all_chunks",
+        lambda video_id: expected,
+    )
+
+    assert retriever.retrieve_all_chunks("video123456") == expected
+
+
+def test_retrieve_all_chunks_rejects_empty_video_id():
+    with pytest.raises(ValueError):
+        retriever.retrieve_all_chunks("")

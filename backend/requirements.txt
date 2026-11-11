@@ -27,3 +27,6 @@ langsmith
 
 yt-dlp
 python-multipart
+
+psycopg[binary]
+pgvector

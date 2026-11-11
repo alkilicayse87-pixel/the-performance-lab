@@ -16,3 +16,4 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
 
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is missing from the .env file")
+NEON_DATABASE_URL = os.getenv("NEON_DATABASE_URL")

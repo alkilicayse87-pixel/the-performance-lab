@@ -1,5 +1,5 @@
-from app.ingestion.youtube_transcript import extract_video_id
-from app.vector_store.chroma_store import get_cached_video_chunks
+﻿from app.ingestion.youtube_transcript import extract_video_id
+from app.vector_store.neon_store import get_cached_video_chunks
 
 
 def ingest_youtube_video(
@@ -21,19 +21,17 @@ def ingest_youtube_video(
             "Please select one of the supported videos."
         )
 
+    segment_count = len({
+        index
+        for chunk in cached_chunks
+        for index in chunk["segment_indices"]
+    })
+
     return {
         "video_id": video_id,
         "transcription_method": "local_catalog",
-        "original_segments": len({
-            index
-            for chunk in cached_chunks
-            for index in chunk["segment_indices"]
-        }),
-        "cleaned_segments": len({
-            index
-            for chunk in cached_chunks
-            for index in chunk["segment_indices"]
-        }),
+        "original_segments": segment_count,
+        "cleaned_segments": segment_count,
         "total_chunks": len(cached_chunks),
         "stored_chunks": len(cached_chunks),
         "status": "success",
