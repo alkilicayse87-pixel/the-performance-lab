@@ -1,5 +1,5 @@
-from app.ingestion.youtube_transcript import extract_video_id
-from app.vector_store.chroma_store import get_cached_video_chunks
+﻿from app.ingestion.youtube_transcript import extract_video_id
+from app.vector_store.neon_store import get_cached_video_chunks
 
 
 def ingest_youtube_video(
