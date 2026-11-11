@@ -1,4 +1,5 @@
 
+import argparse
 import json
 from pathlib import Path
 
@@ -17,18 +18,44 @@ VIDEOS = [
     {"title": "Reduce Your Risk of Injury", "video_id": "Att-yGdYfgI"},
     {"title": "Recovery Strategies for Athletes", "video_id": "W2-UL8P610k"},
     {"title": "What is Strength?", "video_id": "nUsmc4FgfBE"},
+    {"title": "Sleep Toolkit: Tools for Optimizing Sleep & Sleep-Wake Timing", "video_id": "h2aWYjSA1Jc"},
+    {"title": "Food is Fuel: Nutrients for Endurance, Optimal Sports Nutrition, and Handling Plateaus", "video_id": "mLn2X2JSrbg"},
+    {"title": "How to Make Stress Your Friend", "video_id": "RcGyVTAoXEU"},
 ]
 
 OLD_VIDEO_ID = "KTDGYjcR0Yc"
 
 
-def main():
+def main(video_ids: list[str] | None = None):
+    if video_ids is None:
+        videos_to_process = VIDEOS
+    else:
+        videos_by_id = {
+            video["video_id"]: video
+            for video in VIDEOS
+        }
+        unknown_video_ids = set(video_ids) - videos_by_id.keys()
+
+        if unknown_video_ids:
+            raise ValueError(
+                "Unknown video IDs: "
+                + ", ".join(sorted(unknown_video_ids))
+            )
+
+        videos_to_process = [
+            videos_by_id[video_id]
+            for video_id in dict.fromkeys(video_ids)
+        ]
+
+        if not videos_to_process:
+            raise ValueError("At least one video ID must be provided.")
+
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
     prepared_videos = []
 
-    # 1. Fetch and prepare all five transcripts.
-    for video in VIDEOS:
+    # 1. Fetch and prepare all catalog transcripts.
+    for video in videos_to_process:
         video_id = video["video_id"]
         print(f"\nProcessing: {video['title']}")
 
@@ -87,14 +114,18 @@ def main():
     vector_store = get_vector_store()
 
     video_ids_to_refresh = [
-        OLD_VIDEO_ID,
-        *[video["video_id"] for video in VIDEOS],
+        *(
+            [OLD_VIDEO_ID]
+            if video_ids is None
+            else []
+        ),
+        *[video["video_id"] for video in videos_to_process],
     ]
 
     for video_id in video_ids_to_refresh:
         vector_store.delete(where={"video_id": video_id})
 
-    # 4. Index the five validated videos.
+    # 4. Index the validated videos.
     total_chunks = 0
 
     for video in prepared_videos:
@@ -113,4 +144,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Build or refresh the YouTube video transcript catalog."
+    )
+    parser.add_argument(
+        "--video-ids",
+        nargs="+",
+        help="Refresh only these catalog video IDs, preserving other indexed videos.",
+    )
+    arguments = parser.parse_args()
+    main(video_ids=arguments.video_ids)
