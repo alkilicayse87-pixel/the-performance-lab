@@ -42,6 +42,24 @@ const videos = [
     source: "Experts in Sport (Loughborough University)",
     category: "STRENGTH & CONDITIONING",
   },
+  {
+    id: "h2aWYjSA1Jc",
+    title: "Sleep Toolkit: Tools for Optimizing Sleep & Sleep-Wake Timing",
+    source: "Huberman Lab",
+    category: "SLEEP & RECOVERY",
+  },
+  {
+    id: "mLn2X2JSrbg",
+    title: "Food is Fuel: Nutrients for Endurance, Optimal Sports Nutrition, and Handling Plateaus",
+    source: "Mayo Clinic",
+    category: "NUTRITION & HYDRATION",
+  },
+  {
+    id: "RcGyVTAoXEU",
+    title: "How to Make Stress Your Friend",
+    source: "Kelly McGonigal (TED)",
+    category: "STRESS & MENTAL WELLNESS",
+  },
 ];
 
 type Message = {
@@ -75,7 +93,13 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error("The selected video could not be loaded.");
+        const data = await response.json();
+        setStatus(
+          typeof data.detail === "string"
+            ? data.detail
+            : "The selected video could not be loaded."
+        );
+        return;
       }
 
       setStatus("Video ready");
@@ -211,7 +235,7 @@ return (
             THE <span className="text-[#b83a43]">PERFORMANCE</span> LAB
           </div>
           <div className="mt-1 text-[10px] tracking-[0.2em] text-blue-100">
-            AI-POWERED SPORTS KNOWLEDGE
+            AI-POWERED SPORTS & WELLNESS KNOWLEDGE
           </div>
         </div>
         <div className="hidden font-serif text-lg italic md:block">
@@ -224,14 +248,14 @@ return (
     <section className="border-b border-[#dce2e6] bg-[#e8f0f3]">
       <div className="mx-auto max-w-[1500px] px-6 py-12 md:px-10 md:py-16">
         <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-[#287ca5]">
-          SPORT · SCIENCE · PERFORMANCE
+          SPORT · WELLNESS · PERFORMANCE
         </p>
         <h1 className="editorial-title max-w-3xl text-5xl leading-[1.05] text-[#102d4f] md:text-7xl">
-          Explore the science behind performance.
+          Explore the science of performance and wellbeing.
         </h1>
         <p className="editorial-text mt-5 max-w-2xl text-lg text-[#526575] md:text-xl">
           Discover ideas, understand the evidence, and ask questions about
-          sport, exercise and recovery.
+          sport, exercise, sleep, nutrition and stress.
         </p>
         <div className="mt-7 h-1 w-16 bg-[#b83a43]" />
       </div>
@@ -246,7 +270,7 @@ return (
               The video library
             </h2>
             <p className="mt-1 text-sm text-[#687785]">
-              Six selected videos. One place to explore.
+              Nine selected videos. One place to explore.
             </p>
           </div>
         </div>
@@ -317,7 +341,7 @@ return (
                 Welcome.
               </p>
               <p className="mt-2 text-sm leading-relaxed text-[#526575]">
-                Choose one of the six videos. Then ask questions and explore
+                Choose one of the nine videos. Then ask questions and explore
                 its content with the AI assistant.
               </p>
             </div>
